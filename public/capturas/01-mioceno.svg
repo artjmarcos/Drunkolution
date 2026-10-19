@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0%" stop-color="#9ae6b4"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="#0f172a"/>
+  <rect x="0" y="0" width="1200" height="720" fill="url(#g)" opacity="0.25"/>
+  <text x="80" y="120" font-family="sans-serif" font-size="28" fill="#e2e8f0" letter-spacing="8">DRUNKOLUTION</text>
+  <text x="80" y="260" font-family="sans-serif" font-size="92" font-weight="700" fill="#f8fafc">Mioceno</text>
+  <text x="80" y="350" font-family="sans-serif" font-size="38" fill="#dbeafe">Frutas fermentadas</text>
+  <rect x="80" y="420" width="250" height="120" rx="18" fill="#f8fafc" opacity="0.12"/>
+  <text x="110" y="488" font-family="sans-serif" font-size="28" fill="#f8fafc">Lianas</text>
+</svg>
