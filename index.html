@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Drunkolution: The Drunken Ape Theory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a1608">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Drunkolution">
+<meta name="description" content="Un mono que viaja por la historia y nunca suelta la fruta. Ciencia dudosa, comedia garantizada.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<style>
+:root{--bg:#f4ead2;--fg:#2a1b0a;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#140d06;--fg:#fff3d6}}
+:root[data-theme="dark"]{--bg:#140d06;--fg:#fff3d6}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{overscroll-behavior:none;height:100%;margin:0;background:var(--bg);color:var(--fg)}
+body{display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{position:relative;width:min(100vw,60vh);width:min(100vw,60dvh);aspect-ratio:3/5;height:auto;display:block;touch-action:none}
+</style>
+</head>
+<body>
+<div id="boot" style="position:fixed;left:0;right:0;top:45%;text-align:center;font:16px system-ui,sans-serif;color:var(--fg)">🐵 Cargando Drunkolution…</div>
+<canvas id="c"></canvas>
+<script>
+window.addEventListener('error',e=>{try{let d=document.getElementById('err');if(!d){d=document.createElement('div');d.id='err';d.style.cssText='position:fixed;left:0;right:0;top:0;padding:8px;background:#900;color:#fff;font:12px/1.3 monospace;z-index:9;white-space:pre-wrap';document.body.appendChild(d)}d.textContent='Error: '+e.message+' (línea '+e.lineno+')'}catch(x){}});
+if(typeof CanvasRenderingContext2D!='undefined'&&!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath()}}
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),W=360,H=600;
+const dpr=Math.min(window.devicePixelRatio||1,2);
+cv.width=W*dpr;cv.height=H*dpr;ctx.scale(dpr,dpr);
+
+// ---- Ajustes de ritmo (suave y sin histeria) ----
+const G=.22, JV=7.8, MAXV=3.4;
+
+// ---- Eras ----
+const ERAS=[
+ {n:'Caos Prehistórico',e:'🌴',from:0,top:'#c9efa6',bot:'#3f9a52',deco:'🍃',g:'Primera fruta sospechosa. Primer baile terrible.',
+  drinks:[['🍌','Plátano fermentado',12,'Primera cosa sospechosa de la historia'],['🍇','Uvas fermentadas',18,'Cuestionables desde el inicio'],['🥭','Mango podrido',26,'Huele a mala idea'],['🫐','Baya Trueno',24,'Dispara un baile primitivo y terrible']]},
+ {n:'Los Agricultores',e:'🌾',from:1600,top:'#f7e3a1',bot:'#b98a3c',deco:'🌾',pc:'#a8763e',pc2:'#6e4a22',g:'Las vasijas ruedan. Tú también.',
+  drinks:[['🍯','Hidromiel de cosecha',16,'Una vasija rodó. Luego, todas'],['🏺','Cerveza de cebada',22,'La civilización empezó por esto']]},
+ {n:'Mesopotamia',e:'📜',from:3200,top:'#f2c98f',bot:'#a2562f',deco:'🧱',pc:'#c08a5a',pc2:'#7d4f2b',g:'Inventas la contabilidad para explicar la fruta.',
+  drinks:[['🍇','Dátil contable',20,'Explica adónde fue la fruta (mal)'],['🍺','Cerveza de zigurat',24,'Sumas dudosas, resultado: fruta']]},
+ {n:'Antiguo Egipto',e:'🐪',from:4800,top:'#ffe7a8',bot:'#d9a441',deco:'🐪',pc:'#d8b872',pc2:'#a8803a',g:'Imitas a la esfinge y te duermes mal.',
+  drinks:[['🍑','Higo olvidado del faraón',20,'Tu sombra parece una estatua real'],['🍷','Vino del Nilo',24,'Rey por un momento, mono para siempre']]},
+ {n:'Antigua Grecia',e:'🏛️',from:6400,top:'#bfe3ff',bot:'#5aa0d8',deco:'🕊️',pc:'#f2f2ee',pc2:'#b9b9b2',g:'Conferencia: el plátano es el sentido de la vida.',
+  drinks:[['🍇','Uva del Oráculo',20,'Tres predicciones falsas y una pista'],['🍷','Ánfora filosófica',24,'¿Cuál era la pregunta? Se me olvidó']]},
+ {n:'Imperio Romano',e:'🛡️',from:8000,top:'#e8b6a0',bot:'#8a3b2e',deco:'🦅',pc:'#c9704f',pc2:'#8a3b2e',g:'Carrera de cuadrigas: tú eres el accidente.',
+  drinks:[['🍌','Banana imperial de César',22,'Ego x2 y pose de victoria'],['🍷','Vino de banquete',20,'El banquete terminó en carrera']]},
+ {n:'Edad Media',e:'🏰',from:9600,top:'#9fb4c8',bot:'#4b5563',deco:'🏰',pc:'#6b4a2b',pc2:'#3f2a16',g:'Escapa del banquete: barriles y pasteles rodantes.',
+  drinks:[['🍺','Cerveza de taberna',22,'Un barril rodó hacia el rey'],['🧪','Poción misteriosa',24,'El mago dijo: mejor no']]},
+ {n:'Años 20',e:'🎷',from:11400,top:'#2b3a55',bot:'#10151f',deco:'✨',fk:1,pc:'#d9a93b',pc2:'#8a6314',g:'Inicias un baile tan absurdo que todos lo copian.',
+  drinks:[['🥃','Tónico clandestino',20,'Ilegal solo en los libros de historia'],['🍸','Cóctel art decó',26,'Baile ridículo en 3, 2, 1']]},
+ {n:'Años 80',e:'📼',from:13200,top:'#ff6ec7',bot:'#2b1055',deco:'📼',pc:'#2ee6d6',pc2:'#0b6e7a',g:'Entras a la máquina arcade… en píxeles.',
+  drinks:[['🍹','Piña neón',22,'Sincroniza la fruta con el ritmo'],['🥤','Refresco arcade',20,'+1 vida, -1 dignidad']]},
+ {n:'Futuro',e:'🚀',from:15200,top:'#0b132b',bot:'#3a0ca3',deco:'🛸',fk:1,pc:'#7df9ff',pc2:'#1c6a8a',g:'¿Evolución completa? Elegiste la fruta fermentada.',
+  drinks:[['🧪','Néctar sintético',24,'Optimizado por un robot confundido'],['⭐','Estrella gravedad cero',26,'Flotas. Mal momento para dudar',1]]}
+];
+const ERA_LEN=3600,LAUNCH=8;
+(()=>{const N=[
+['Caos Prehistórico',{n:'Era Glacial',e:'🧊',top:'#dff3ff',bot:'#7fb4d6',deco:'❄️',pc:'#bfe6f5',pc2:'#7fb4d6',g:'Un mamut te mira. Tú resbalas con estilo.',rt:174,wv:'sine',hz:['🧊','fall'],dr:()=>{ell(0,-21,15,6,'#eef6fa');ell(0,14,10,6,'#8fb8d6')},drinks:[['🍒','Cereza congelada',20,'Se descongela con sorpresa'],['🧊','Granizado fermentado',24,'Resbaloso y sospechoso']]}],
+['Antiguo Egipto',{n:'Antigua China',e:'🏮',top:'#ffd1c9',bot:'#b3262b',deco:'🏮',pc:'#c0392b',pc2:'#7a1b1b',g:'Reverencia solemne… y voltereta acrobática.',rt:196,wv:'triangle',hz:['🏮','fall'],dr:()=>{ell(0,14,10,6,'#c0392b');rr(-1,-30,2,9,1,'#f2d33c');circ(0,-31,3,'#f2d33c')},drinks:[['🍑','Durazno imperial',20,'Se sirve con reverencia (y caída)'],['🍵','Té de loto burbujeante',24,'Ceremonia seria. El mono, no']]}],
+['Imperio Romano',{n:'Era Vikinga',e:'⚓',top:'#a9c7d8',bot:'#2f4f66',deco:'🌊',pc:'#8a6a45',pc2:'#5a4128',g:'Intentas verte temible. Estornudas. Giras.',rt:156,wv:'sawtooth',hz:['🐟','fly'],dr:()=>{ctx.fillStyle='#9aa3ad';ctx.beginPath();ctx.ellipse(0,-15,15.5,9,0,Math.PI,0);ctx.fill();rr(-15.5,-17,31,3,1,'#6d757e');circ(-23,8,8,'#a8763e');circ(-23,8,3,'#c9a227')},drinks:[['🍯','Hidromiel del trueno',22,'Valiente hasta el estornudo'],['🍈','Melón escarcha',24,'Deja una estela resbalosa']]}],
+['Edad Media',{n:'Renacimiento',e:'🎨',top:'#f4dcc2',bot:'#9b6b4a',deco:'🎨',pc:'#b08a5a',pc2:'#6f4f2a',g:'Posas para un retrato. Aguantas 2 segundos.',rt:210,wv:'triangle',hz:['🖼️','fall'],dr:()=>{ell(0,-22,13,5,'#7a1f3d');circ(8,-26,2.5,'#7a1f3d');ell(0,9,9,3,'#fff')},drinks:[['🥭','Mango loco',22,'Pinta formas absurdas en el aire'],['🍷','Vino de taller',20,'Posa serio… por dos segundos']]}],
+['Renacimiento',{n:'Era Pirata',e:'🏴‍☠️',top:'#8fd8e8',bot:'#1b6f8a',deco:'🦀',pc:'#7a5230',pc2:'#4a2f18',g:'Un cañón te lanza al tesoro. Sí, a ti.',rt:185,wv:'square',hz:['🦜','fly'],dr:()=>{ctx.fillStyle='#1c1c1c';ctx.beginPath();ctx.moveTo(-17,-20);ctx.lineTo(0,-31);ctx.lineTo(17,-20);ctx.closePath();ctx.fill();rr(-7,-13,6,5,2,'#111');ell(0,14,10,6,'#c0392b')},drinks:[['🍍','Piña fantasma',24,'Te vuelves pirata… y transparente'],['🥥','Coco de tormenta',22,'El loro opina de todo']]}],
+['Era Pirata',{n:'Era Industrial',e:'⚙️',top:'#bdbdb5',bot:'#4a4a45',deco:'⚙️',pc:'#777b80',pc2:'#44474b',g:'Una cadena de engranajes lanza fruta volando.',rt:220,wv:'sawtooth',hz:['⚙️','fall'],dr:()=>{ell(0,-21,14,4,'#555');circ(-5,-17,3,'#d9a93b');circ(5,-17,3,'#d9a93b');ell(0,14,10,6,'#6b4a2b')},drinks:[['🍑','Ciruela a vapor',22,'Suelta una nube de vapor'],['🍺','Cerveza de fábrica',20,'La caldera también hace hic']]}],
+['Era Industrial',{n:'Lejano Oeste',e:'🤠',top:'#ffd89b',bot:'#c2662d',deco:'🌵',pc:'#9a6a3a',pc2:'#5c3a1c',g:'Duelo al mediodía: ambos sacan bananas.',rt:147,wv:'triangle',hz:['🌵','fall'],dr:()=>{ell(0,-21,20,3.5,'#8a5a30');rr(-8,-30,16,10,4,'#8a5a30');ell(0,5,8,4,'#c0392b')},drinks:[['🌵','Tuna del desierto',22,'Polvorienta pero valiente'],['🥃','Tónico del saloon',20,'Ficticio y muy polvoriento']]}],
+['Años 20',{n:'Años 70',e:'🪩',top:'#ffb347',bot:'#8a2be2',deco:'🪩',pc:'#f2a31b',pc2:'#a1621a',g:'Tu baile hace rebotar toda la fruta.',rt:233,wv:'square',hz:['🪩','fall'],dr:()=>{rr(-12,-14,24,8,4,'rgba(255,120,200,.6)');ell(0,14,10,6,'#f2a31b')},drinks:[['🐲','Fruta del dragón disco',22,'Sincroniza la fruta al ritmo'],['🍹','Cóctel de espejos',24,'Brilla más que tú']]}],
+['Años 80',{n:'Años 90',e:'🛹',top:'#7ee8a6',bot:'#2d3a8c',deco:'🛹',pc:'#ff5fa2',pc2:'#8c2f5f',g:'Truco de skate: aterrizas sobre una banana.',rt:262,wv:'sawtooth',hz:['🛹','fly'],dr:()=>{ell(0,-21,12,5,'#2b6fd0');rr(9,-22,10,3,1,'#2b6fd0');ell(0,14,10,6,'#7bd96a')},drinks:[['🍉','Sandía de skate',22,'Aterriza sobre una banana rodante'],['🥤','Soda de casete',20,'Rebobina tu dignidad']]}],
+['Años 90',{n:'Era Espacial',e:'🪐',top:'#1b2a49',bot:'#050812',deco:'🪐',pc:'#9fb3c8',pc2:'#5a6b80',g:'Un eructo te lanza a la órbita. Normal.',rt:196,wv:'sine',hz:['🛰️','fly'],dr:()=>{ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-8,17,0,7);ctx.stroke();ell(0,14,10,6,'#e8ecff')},drinks:[['🌟','Fruta lunar',24,'Gravedad baja por un ratito',1],['🧪','Néctar orbital',22,'Eructo propulsor garantizado']]}]
+];
+N.forEach(([a,o])=>ERAS.splice(ERAS.findIndex(e=>e.n==a)+1,0,o));
+ERAS.forEach((e,i)=>e.from=i*ERA_LEN);
+})();
+const ERAS_ALL=ERAS.slice();ERAS.length=Math.min(ERAS.length,LAUNCH);
+const ERAS_OLD=[
+ {n:'Mioceno',e:'🌴',from:0,top:'#c9efa6',bot:'#3f9a52',deco:'🍃',
+  drinks:[['🍌','Plátano fermentado',12],['🍇','Uvas fermentadas',18],['🥭','Mango podrido',26]]},
+ {n:'Neolítico',e:'🔥',from:1800,top:'#ffd9a3',bot:'#b5532b',deco:'🦴',pc:'#8c8a86',pc2:'#5f5d59',
+  drinks:[['🍯','Hidromiel',16],['🏺','Cerveza de cebada',22]]},
+ {n:'Antiguo Egipto',e:'🐪',from:3400,top:'#ffe7a8',bot:'#d9a441',deco:'🐪',pc:'#d8b872',pc2:'#a8803a',
+  drinks:[['🍷','Vino del Nilo',20],['🍺','Cerveza de dátiles',24]]},
+ {n:'Edad Media',e:'🏰',from:5000,top:'#9fb4c8',bot:'#4b5563',deco:'🏰',pc:'#6b4a2b',pc2:'#3f2a16',
+  drinks:[['🍺','Cerveza de taberna',22],['🍷','Vino de monje',20]]},
+ {n:'Años 20',e:'🎷',from:6700,top:'#2b3a55',bot:'#10151f',deco:'✨',fk:1,pc:'#d9a93b',pc2:'#8a6314',
+  drinks:[['🥃','Whisky de contrabando',20],['🍸','Cóctel clandestino',26]]},
+ {n:'Años 80',e:'📼',from:8500,top:'#ff6ec7',bot:'#2b1055',deco:'📼',pc:'#2ee6d6',pc2:'#0b6e7a',
+  drinks:[['🍹','Piña colada',22],['🥤','Refresco con ron',20]]},
+ {n:'Futuro',e:'🚀',from:10400,top:'#0b132b',bot:'#3a0ca3',deco:'🛸',fk:1,pc:'#7df9ff',pc2:'#1c6a8a',
+  drinks:[['🧪','Néctar sintético',24],['🥂','Champán cuántico',22]]}
+];
+const HEALTHY=[['🍎','Manzana fresca'],['🍊','Naranja fresca'],['🍐','Pera fresca']];
+const hex=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+const mix=(a,b,t)=>{const A=hex(a),B=hex(b);return 'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')+')'};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+let st='intro',climb=0,best=0,drunk=0,bo=0,hic=0,hicT=200,P,plats=[],floats=[],bubs=[],toast=null,banner=null,
+    curaUsed=false,lastEra=0,lastFake=false,topY=0,dir=0,tick=0,overAt=0,newRec=false,lastX=0,heldL=0,heldR=0,jFlash=0;
+try{best=+localStorage.getItem('drunko_best')||0}catch(e){}
+
+
+const eraIdx=()=>{let i=0;while(i<ERAS.length-1&&climb>=ERAS[i+1].from)i++;return i};
+const lbl=()=>bo>0?'Blackout':drunk<15?'Sobrio':drunk<35?'Alegre':drunk<55?'Mareado':drunk<75?'Borracho':'Hecho un desastre';
+let AC=null,muted=false;
+try{muted=localStorage.getItem('drunko_mute')=='1'}catch(e){}
+function au(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state=='suspended')AC.resume();return AC}
+function tone(f,d,type,vol,slide,delay){
+ const a=au();if(!a||muted)return;
+ const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();
+ o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+ if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),t+d);
+ g.gain.setValueAtTime(vol||.12,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+ o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02);
+}
+const SFX={
+ jump:()=>tone(300,.14,'square',.07,620),
+ air:()=>tone(500,.2,'triangle',.12,1200),
+ land:()=>tone(130,.07,'sine',.1,70),
+ drink:()=>{tone(220,.12,'sine',.16,520);tone(330,.12,'sine',.13,720,.1);tone(200,.22,'sawtooth',.05,110,.2)},
+ fresh:()=>[660,880,1320].forEach((f,i)=>tone(f,.15,'triangle',.12,0,i*.07)),
+ hic:()=>{tone(180,.07,'square',.09,430);tone(430,.09,'square',.07,160,.08)},
+ era:()=>{tone(70,.6,'sine',.3,35);[392,523,659,784,1046,784,1046,1318].forEach((f,i)=>tone(f,.22,'square',.09,0,.1+i*.09))},
+ chaos:()=>[300,450,600,900,1200].forEach((f,i)=>tone(f,.12,'sawtooth',.07,f*1.5,i*.06)),
+ over:()=>[330,277,233,175].forEach((f,i)=>tone(f,.3,'triangle',.14,f*.9,i*.22)),
+ crumble:()=>tone(90,.22,'sawtooth',.07,40),
+ hit:()=>tone(160,.16,'square',.12,60),
+ vomit:()=>{tone(260,.35,'sawtooth',.09,90);tone(120,.3,'square',.05,60,.1)}
+};
+const ROOT=[165,175,185,196,208,220,233,247,262,277],WAVE=['triangle','triangle','square','triangle','sine','square','triangle','square','sawtooth','sine'],PENTA=[0,3,5,7,10,12,15,17,19];
+let mi=3;
+function music(){
+ if(st!='play'||muted||tick%14)return;
+ const e=eraIdx();mi=clamp(mi+Math.floor(rnd(-2,3)),0,PENTA.length-1);
+ tone(ERAS[e].rt*Math.pow(2,PENTA[mi]/12)*(1+drunk*.0003*Math.sin(tick*.2)),.22,ERAS[e].wv,.03);
+ if(tick%56==0)tone(ERAS[e].rt/2,.4,'sine',.06);
+}
+const BM={x:10,y:66,w:36,h:36};
+const BE={x:52,y:66,w:36,h:36};let lowfx=false;try{lowfx=localStorage.getItem('drunko_lowfx')=='1'}catch(e){}
+function muteBtn(){rr(BM.x,BM.y,BM.w,BM.h,18,'rgba(20,10,0,.45)');tx(muted?'🔇':'🔊',BM.x+18,BM.y+19,18);rr(BE.x,BE.y,BE.w,BE.h,18,'rgba(20,10,0,.45)');tx(lowfx?'😌':'🤪',BE.x+18,BE.y+19,18)}
+const CR={'Caos Prehistórico':'🐊','Era Glacial':'🦣','Los Agricultores':'🐖','Mesopotamia':'🐏','Antiguo Egipto':'🐪','Antigua China':'🐼','Antigua Grecia':'🐢','Imperio Romano':'🐎','Era Vikinga':'🐋','Edad Media':'🐴','Renacimiento':'🦢','Era Pirata':'🦈','Era Industrial':'🚂','Lejano Oeste':'🐂','Años 20':'🚗','Años 70':'🚐','Años 80':'🚘','Años 90':'🛹','Era Espacial':'🛸','Futuro':'🤖'};
+let IC=[];
+const IC_OLD=[
+ {e:'🍌',t:['Hace millones de años…','un primate encontró una fruta caída,','muy madura… y un poquito fermentada.']},
+ {e:'🔬',t:['El biólogo Robert Dudley propuso','la «hipótesis del mono borracho»:','nuestros ancestros se sintieron atraídos','por el alcohol natural de la fruta madura.']},
+ {e:'🍇',t:['Quizá ese olor los guiaba hacia la comida.','Millones de años después, la humanidad','sigue inventando formas de marearse.']},
+ {e:'🐵',t:['Esta es la historia de un mono','que cruzó toda la historia…','y nunca soltó la fruta.','Ciencia dudosa. Comedia garantizada.']}
+];
+const IE=['🍌','🥭','🍇','🍑'];
+const IP1=[['Hace millones de años…','un mono oló una fruta rara.','Mala idea. Excelente idea.'],['Año 10.000.000 a. C.','Un mono encuentra fruta tirada.','Huele raro. La come igual.'],['Había una vez un mono','y una fruta pasadita de madura.','Lo demás es historia.'],['Hace millones de años, un mono','tuvo una idea brillante:','«¿y si me como esto?»'],['Antes de la civilización,','hubo un mono y una fruta rara.','Spoiler: ganó el mono.'],['Capítulo 1 de la evolución:','un mono, un plátano muy maduro','y cero dudas existenciales.']];
+const IP2=[['Teoría del mono borracho','(ciencia real, de Robert Dudley):','los monos aman la fruta fermentada.'],['Un científico, Robert Dudley, cree','que los primates se mareaban','con el alcohol natural de la fruta.'],['Hipótesis de Robert Dudley:','la fruta madura trae alcohol natural','y a los monos les gustaba. Mucho.'],['La ciencia lo llama','«hipótesis del mono borracho».','Dudley la propuso. Los monos la vivieron.'],['Según Robert Dudley, los primates','amaban la fruta fermentada.','(Hoy lo llamamos «aperitivo».)'],['Hipótesis seria, ¿eh?','Robert Dudley: el alcohol natural','guiaba a los monos a la fruta madura.']];
+const IP3=[['Hoy viajarás por la historia…','y el mono no soltará la fruta.','Ciencia dudosa. Comedia garantizada.'],['La humanidad inventó la civilización.','El mono inventó el hipo.','Sube. Evoluciona (más o menos).'],['Millones de años después,','seguimos igual de mareados.','¡Sube por la historia, mono!'],['Millones de años después,','seguimos tropezando con lo mismo.','Pero ahora con wifi.'],['Tu misión: cruzar la historia','sin perder la fruta… ni la dignidad.','(La dignidad es opcional.)'],['La civilización inventó las leyes.','El mono inventó las excusas.','Sube. Evoluciona. Disimula.']];
+const QUIPS=['Dato falso: el mono inventó el aperitivo.','Primera fruta sospechosa. Primer baile terrible.','Tu mono no bebe. Hace investigación.','Ciencia dudosa, comedia garantizada.','Hipo en 3, 2, 1…','La evolución puede esperar. La fruta, no.','Consejo: los monos serios no existen.','Hoy toca evolucionar. Más o menos.','Un mono, una fruta, cero planes.','La evolución es lenta. Tú, más.','Spoiler: termina en hipo.','Todo gran invento empezó con una mala idea.','Hoy el objetivo: no pasar vergüenza evolutiva.','Dicen que la fruta madura da sabiduría.','Advertencia: puede contener ciencia.','Nadie te pidió evolucionar. Viniste igual.','Primera ley de la evolución: no mires abajo.','El plátano no juzga. La gravedad, sí.'];
+const pk=a=>a[Math.floor(Math.random()*a.length)];
+function pickIntro(){IC=[{e:pk(IE),t:pk(IP1)},{e:'🔬',t:pk(IP2)},{e:'🐵',t:pk(IP3)}]}
+let ii=0,iT=0;
+const BI={x:W-46,y:66,w:36,h:36};
+function infoBtn(){rr(BI.x,BI.y,BI.w,BI.h,18,'rgba(20,10,0,.45)');tx('📖',BI.x+18,BI.y+19,18);rr(BG.x,BG.y,BG.w,BG.h,18,'rgba(20,10,0,.45)');tx(gen=='f'?'♀':'♂',BG.x+18,BG.y+19,20,'#fff',null,1)}
+function introEnd(){st=gen?'menu':'pick';try{localStorage.setItem('drunko_intro','1')}catch(e){}}
+function introNext(x,y){
+ if(x!==undefined&&hit(x,y,{x:W-90,y:14,w:76,h:32})){introEnd();return}
+ if(tick-iT<15)return;
+ if(ii<IC.length-1){ii++;iT=tick;SFX.fresh()}else introEnd();
+}
+function intro(){
+ const c=IC[ii],t=tick-iT;
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2a1608');g.addColorStop(1,'#5a2d0c');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.globalAlpha=.12;for(let k=0;k<7;k++)tx('🍌',(k*97+30)%W,((k*131+tick*.5)%(H+60))-30,28,'#000');
+ ctx.globalAlpha=clamp(t/20,0,1);
+ if(ii==IC.length-1){P.x=W/2;P.y=190+Math.sin(tick*.06)*6;P.vy=-1;P.vx=0;drunk=(tick*.3)%100;ctx.save();ctx.translate(W/2,190);ctx.scale(2.6,2.6);ctx.translate(-W/2,-190);ape(P.x,P.y,P.vy,tick);ctx.restore()}
+ else tx(c.e,W/2,190+Math.sin(tick*.05)*6,84,'#000');
+ c.t.forEach((s,k)=>{ctx.globalAlpha=clamp((t-20-k*22)/18,0,1);tx(s,W/2,340+k*30,15,k==0&&ii<IC.length-1?'#ffd36b':'#fff3d6',null,k==0)});
+ ctx.globalAlpha=1;
+ for(let k=0;k<IC.length;k++)circ(W/2+(k-(IC.length-1)/2)*16,520,k==ii?5:3,k==ii?'#ffd36b':'rgba(255,255,255,.35)');
+ ctx.globalAlpha=.6+.4*Math.sin(tick*.08);tx(ii<IC.length-1?'Toca para continuar':'Toca para comenzar',W/2,556,15,'#fff',null,1);ctx.globalAlpha=1;
+ tx('Saltar ›',W-52,30,13,'rgba(255,255,255,.75)');
+ muteBtn();
+}
+const BO_F=40,BO_O=90,BO_W=70,BO_T=BO_F+BO_O+BO_W;
+const BOMSG=['¿Quién movió el planeta?','Cinco segundos perdidos en la evolución','El cerebro dejó de responder','Reiniciando mono…','Se apagó el wifi evolutivo','Apagado por mantenimiento evolutivo','Memoria borrada. Plátano incluido.','Cargando dignidad… 0%','Modo avión cerebral activado','Dormir también es evolucionar'];
+const VMSG=['La fruta ganó','Error de procesamiento evolutivo','Demasiada ciencia para un plátano','Eso no estaba en la teoría','Mi estómago pidió una segunda opinión','Esto no figuraba en la hipótesis','Reciclaje de fruta en marcha','La digestión también evoluciona','Efecto secundario: honestidad','La fruta pidió el divorcio'];
+let bp=0,dz=0,vm=0,vmT=600,iv=0,ivT=900,boMsg='';
+function wakeFx(){dz=130;floats.push({x:P.x,y:P.y-30,t:60,s:'¿¿??'});SFX.hic()}
+function blurFx(){
+ const k=lowfx?.45:1,b=Math.max(clamp((drunk-30)/70,0,1),dz/130)*k;
+ if(b<.03)return;
+ const d=(2+4*b)*(.6+.8*(.5+.5*Math.sin(tick*.07)));
+ ctx.globalAlpha=.16+.3*b;ctx.drawImage(cv,0,0,cv.width,cv.height,Math.sin(tick*.05)*d,Math.cos(tick*.04)*d,W,H);ctx.globalAlpha=1;
+ const g=ctx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.75);g.addColorStop(0,'rgba(20,10,0,0)');g.addColorStop(1,'rgba(20,10,0,'+(.5*b)+')');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+function blackoutDraw(){
+ if(bo<=0)return;
+ const e=BO_T-bo,a=clamp(e<BO_F?e/BO_F:e<BO_F+BO_O?1:1-(e-BO_F-BO_O)/BO_W,0,1);
+ ctx.fillStyle='rgba(0,0,0,'+(.94*a)+')';ctx.fillRect(0,0,W,H);
+ if(e>=BO_F){ctx.globalAlpha=clamp(a*3,0,1);tx('💤',W/2,H/2-30+Math.sin(tick*.1)*6,64,'#000');tx(boMsg,W/2,H/2+40,15,'#fff',null,1);ctx.globalAlpha=1}
+}
+let cp=0;try{cp=+localStorage.getItem('drunko_cp')||0}catch(e){}
+cp=Math.min(Math.max(cp,0),ERAS.length-1);
+const BZ={x:W/2-60,y:528,w:120,h:28};
+const SAY_S=['Esa nube me mira raro.','¿Y si el suelo es el techo?','La gravedad no me cae bien.','Hoy el plátano se ve más… plátano.','¿Los monos pagan impuestos?','Esto es por la ciencia. Creo.','Mi tatarabuelo lo hacía mejor.','Soy un mono muy ocupado.','Cuento hasta tres. Dos.','La evolución me debe un favor.','¿Alguien vio mi dignidad?'];
+const SAY_D=['El suelo se mueve. Qué descaro.','Eso fue intencional. Lo juro.','Mi cola opina distinto.','¿Quién apagó el cielo?','Veo dos plataformas. Elijo la otra.','Le debo una disculpa a la gravedad.','¡Vamos, plátano, tú puedes!','Yo sé lo que hago. (No.)'];
+const SAY_W=['Todo está bien. Todo gira.','Hip… digo, hola.','Mi cerebro: cargando…','Soy un genio. Un genio mareado.','No estoy mareado: gira la Tierra.','Creo que vi a Darwin. Me ignoró.','Quiero un plátano. O el otro.'];
+const SAYE={'Caos Prehistórico':'Ugh. Fruta. Ugh. (Filosofía.)','Era Glacial':'Tengo frío en la cola.','Los Agricultores':'Esa vasija me persigue.','Mesopotamia':'Esto lo anoto en una tablilla.','Antiguo Egipto':'Las pirámides me miran raro.','Antigua China':'Reverencia… o voltereta. Ambas.','Antigua Grecia':'Pienso, luego salto.','Imperio Romano':'Veni, vidi… caí.'};
+let sp=null,spT=600;
+function pickSay(){const e=SAYE[ERAS[eraIdx()].n];if(e&&Math.random()<.3)return e;const L=lbl();return pk(L=='Hecho un desastre'?SAY_W:L=='Mareado'||L=='Borracho'?SAY_D:SAY_S)}
+function say(s){if(bo>0||vm>0)return;sp={t:170,s:s||pickSay()}}
+function bubbleDraw(){
+ if(!sp||bo>0)return;
+ ctx.font='bold 12px system-ui,sans-serif';
+ const w=Math.min(W-12,ctx.measureText(sp.s).width+18),x=clamp(P.x,w/2+6,W-w/2-6),y=P.y-58;
+ ctx.globalAlpha=Math.min(1,sp.t/20);
+ rr(x-w/2,y-13,w,26,11,'rgba(255,255,255,.96)');
+ ctx.fillStyle='rgba(255,255,255,.96)';ctx.beginPath();ctx.moveTo(P.x-5,y+12);ctx.lineTo(P.x+5,y+12);ctx.lineTo(P.x,y+21);ctx.fill();
+ tx(sp.s,x,y,12,'#2a1608',null,1);ctx.globalAlpha=1;
+}
+let gen='';try{gen=localStorage.getItem('drunko_gen')||''}catch(e){}
+const BL1={x:20,y:190,w:150,h:230},BL2={x:190,y:190,w:150,h:230},BG={x:94,y:66,w:36,h:36};
+function pick(){
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2a1608');g.addColorStop(1,'#5a2d0c');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ tx('¿Quién sube a la historia?',W/2,110,22,'#ffd36b',null,1);
+ tx('Elige tu mono. Ambos son igual de irresponsables.',W/2,142,12,'#fff3d6');
+ [[BL1,'m','MONO'],[BL2,'f','MONA']].forEach(([b,k,n])=>{
+  rr(b.x,b.y,b.w,b.h,18,'rgba(255,255,255,.1)');
+  const sv=gen,sd=drunk;gen=k;drunk=(tick*.3+(k=='f'?40:0))%100;
+  P.vx=0;ctx.save();ctx.translate(b.x+b.w/2,b.y+95);ctx.scale(2.4,2.4);ape(0,0,-1,tick);ctx.restore();
+  gen=sv;drunk=sd;
+  tx(n,b.x+b.w/2,b.y+b.h-24,18,'#fff',null,1)});
+ ctx.globalAlpha=.6+.4*Math.sin(tick*.08);tx('Toca para elegir',W/2,520,16,'#fff',null,1);ctx.globalAlpha=1;
+ muteBtn();
+}
+let flash=0,shk=0,conf=[];
+function eraFx(i){setTimeout(()=>{if(st=='play')say(SAYE[ERAS[i].n])},1200);flash=45;shk=34;conf=[];for(let k=0;k<28;k++)conf.push({x:rnd(0,W),y:rnd(-200,-10),vy:rnd(1.5,3.5),vx:rnd(-.6,.6),e:ERAS[i].deco,t:200})}
+let run={d:0,h:0,hit:0},hz=[],hzT=240,atoast=null,ach={};
+try{ach=JSON.parse(localStorage.getItem('drunko_ach')||'{}')||{}}catch(e){}
+const HZ=[['🪰','fly'],['🏺','fall'],['🧱','fall'],['🪲','fly'],['🦉','fly'],['🐎','fly'],['🥧','fall'],['🎩','fly'],['👾','fly'],['🛸','fly']];
+function hurt(){P.inv=90;P.vy=-4.5;P.g=false;P.ap=0;drunk=Math.min(99,drunk+15);run.hit++;SFX.hit();floats.push({x:P.x,y:P.y-28,t:45,s:pk(['¡AY!','¡AU!','¡MI DIGNIDAD!','Eso dolió… en la historia'])})}
+function hazards(){
+ if(P.inv>0)P.inv--;
+ plats.forEach(p=>{if(p.m){const nx=p.ox+Math.sin(tick*p.sp+p.ph)*p.amp;p.dx=nx-p.x;p.x=nx}});
+ if(atoast&&--atoast.t<=0)atoast=null;
+ if(flash>0)flash--;if(shk>0)shk--;if(dz>0)dz--;
+ if(sp&&--sp.t<=0)sp=null;
+ if(bo==0&&vm==0&&!(P.inv>0)){spT--;if(spT<=0){say();spT=rnd(720,1200)}}
+ if(bp&&bo==0&&P.g){bp=0;bo=BO_T;P.inv=BO_T+40;boMsg=pk(BOMSG);SFX.over();unlock('caos')}
+ if(iv>0)iv--;
+ if(drunk>=55&&bo==0&&vm==0&&P.g){ivT--;if(ivT<=0){iv=110;ivT=rnd(800,1300);SFX.hic();toast=['🔄 ¡Controles al revés!',110]}}
+ if(vm>0){vm--;if(vm%3==0)conf.push({x:P.x+P.face*6,y:P.y-4,vy:rnd(1,2.5),vx:P.face*rnd(.5,2)+rnd(-.5,.5),e:pk(['🟢','🟡','🟤']),t:60})}
+ else if(drunk>=75&&bo==0){vmT--;if(vmT<=0){vm=45;vmT=rnd(420,780);SFX.vomit();toast=[pk(VMSG),150];if(!P.g)P.vx+=rnd(-2.5,2.5)}}
+ conf.forEach(c=>{c.x+=c.vx;c.y+=c.vy;c.t--});conf=conf.filter(c=>c.t>0&&c.y<H+30);
+ if(climb>300&&bo==0){hzT--;if(hzT<=0){hzT=rnd(200,340)-eraIdx()*8;const h=ERAS[eraIdx()].hz;
+  if(h[1]=='fall')hz.push({e:h[0],x:rnd(50,W-40),y:-24,vx:0,vy:2.2,w:50});
+  else{const s=Math.random()<.5?1:-1;hz.push({e:h[0],x:s>0?-24:W+24,y:rnd(150,420),vx:1.7*s,vy:0,w:50,s})}}}
+ for(const h of hz){
+  if(h.w>0){h.w--;continue}
+  h.x+=h.vx;h.y+=h.vy;
+  if(!(P.inv>0)&&Math.hypot(P.x-h.x,P.y-h.y)<20){h.x=-999;hurt()}
+ }
+ hz=hz.filter(h=>h.y<H+40&&h.x>-60&&h.x<W+60);
+}
+function drawHz(){hz.forEach(h=>{
+ if(h.w>0){const wx=h.vx?(h.s>0?16:W-16):h.x,wy=h.vx?h.y:84;if(tick%10<6)tx('❗',wx,wy,22,'#000');return}
+ tx(h.e,h.x,h.y,28,'#000');
+})}
+const ACHD={trago:['Primer trago histórico','Bebiste tu primera fruta fermentada'],kebab:['Sabiduría exprés','Un kebab te devolvió la lucidez'],doble:['Doble doble salto','Guardaste dos saltos dobles a la vez'],caos:['Evolución fuera del chat','Sufriste tu primer blackout'],hipo:['Hipo histórico','Cinco hipos en una sola partida'],abstemio:['Mono aburrido','Llegaste a Mesopotamia sin beber nada'],esquivo:['Esquivaste la historia','Llegaste a Grecia sin recibir un golpe'],roma:['Camino a la banana','Llegaste al Imperio Romano'],futuro:['¿Evolución completa?','Llegaste al Futuro'],cura:['Milagro dudoso','Usaste La Cura Milagrosa']};
+function unlock(id){if(ach[id])return;ach[id]=1;try{localStorage.setItem('drunko_ach',JSON.stringify(ach))}catch(e){}atoast={t:200,a:ACHD[id]};SFX.fresh()}
+const achCount=()=>Object.keys(ach).length;
+function eraAch(i){const x=n=>ERAS.findIndex(e=>e.n==n);if(i>=x('Mesopotamia')&&run.d==0)unlock('abstemio');if(i>=x('Antigua Grecia')&&run.hit==0)unlock('esquivo');if(i==x('Imperio Romano'))unlock('roma');if(ERAS[i].n=='Futuro')unlock('futuro')}
+function atoastDraw(){if(!atoast)return;ctx.globalAlpha=Math.min(1,atoast.t/20);rr(20,216,W-40,48,16,'rgba(60,30,100,.88)');tx('🏆 '+atoast.a[0],W/2,233,14,'#ffe27a',null,1);tx(atoast.a[1],W/2,252,11,'#fff3d6');ctx.globalAlpha=1}
+let msg='';
+const MSGS=['Tus ancestros estarían orgullosos. Quizás.','Eso no fue estrategia. Fue un incidente frutal.','La evolución abandonó el chat.','Precisión histórica: dudosa. Confianza: 100%.','Un historiador sintió una perturbación.','Felicidades: decepcionaste a tres civilizaciones.','El imperio cayó. La banana sobrevivió.','El progreso científico tocó fondo.','La gravedad ganó otra vez. Es su hobby.','Fallaste con mucho estilo. Eso cuenta, ¿no?','Darwin está revisando tu caso.','Tu ADN pidió el libro de reclamaciones.','Sobreviviste al Mioceno, no a tu criterio.','Nadie evoluciona sin tropezar un poco.','Un mono, un plan y ninguna coincidencia.','Error 404: equilibrio no encontrado.','La historia se repite. Tú, también.','El eslabón perdido eras tú.','Confianza al 100%. Coordinación al 3%.','Esto irá a «lecciones aprendidas».','Un consejo: no te caigas.','Tu cola pide un seguro de viaje.'];
+
+function addPlat(y){
+ const e=eraIdx(),fake=!!ERAS[e].fk&&!lastFake&&Math.random()<.15;lastFake=fake;
+ const nx=()=>clamp(lastX+rnd(-130,130),0,W-66);
+ if(fake){plats.push({x:nx(),y:y+rnd(-6,6),w:66,fake:1,fall:0});
+  const q={x:nx(),y:y+rnd(-6,6),w:66,fake:0,fall:0};lastX=q.x;plats.push(q);return}
+ const p={x:nx(),y,w:66,fake:0,fall:0};lastX=p.x;
+ const r0=Math.random();
+ if(climb>500&&r0<.16){p.m=1;p.w=84;p.amp=rnd(35,70);p.ox=clamp(p.x,p.amp+4,W-p.w-p.amp-4);p.x=p.ox;lastX=p.ox;p.ph=rnd(0,6.28);p.sp=rnd(.012,.022);p.k=CR[ERAS[e].n]||'🐢'}
+ else if(climb>500&&r0<.26)p.b=1;
+ if(Math.random()<.3){
+  const r=Math.random();
+  if(r<.05&&climb>400)p.item={e:'🥙',k:1};
+  else if(r<.3){const h=HEALTHY[Math.floor(rnd(0,HEALTHY.length))];p.item={e:h[0],n:h[1],h:1}}
+  else{const d=ERAS[e].drinks[Math.floor(rnd(0,ERAS[e].drinks.length))];p.item={e:d[0],n:d[1],v:d[2],d:d[3],lg:d[4]}}
+ }
+ plats.push(p);
+}
+function reset(e0){
+ climb=ERAS[e0|0].from;drunk=0;bo=0;hic=0;hicT=200;plats=[];floats=[];bubs=[];toast=null;curaUsed=false;lastEra=e0|0;lastFake=false;newRec=false;run={d:0,h:0,hit:0};hz=[];hzT=240;atoast=null;bp=0;dz=0;vm=0;vmT=600;iv=0;ivT=900;sp=null;spT=600;
+ banner=e0?{t:240,s:ERAS[e0].n,g:ERAS[e0].g,i:ERAS[e0].e}:{t:170,s:ERAS[0].e+' '+ERAS[0].n,g:pk(QUIPS)};
+ const s0={x:W/2-40,y:H-170,w:80,fake:0,fall:0};plats.push(s0);lastX=s0.x;
+ topY=s0.y;while(topY>-60){topY-=rnd(58,90);addPlat(topY)}
+ P={x:W/2,y:s0.y-18,vx:0,vy:0,face:1,g:true,gp:s0,coy:0,ap:0,ch:0,jb:0,jp:false};
+}
+function over(){
+ st='over';overAt=performance.now();msg=MSGS[Math.floor(Math.random()*MSGS.length)];ptrs.clear();SFX.over();cp=eraIdx();try{localStorage.setItem('drunko_cp',String(cp))}catch(e){}dir=0;heldL=heldR=0;
+ if(climb>best){best=climb;newRec=true;try{localStorage.setItem('drunko_best',String(best))}catch(e){}}
+}
+function revive(){
+ curaUsed=true;unlock('cura');drunk=0;bo=0;bp=0;iv=0;vm=0;
+ const s1={x:W/2-40,y:H-170,w:80,fake:0,fall:0};plats.push(s1);
+ Object.assign(P,{x:W/2,y:s1.y-18,vx:0,vy:0,g:true,gp:s1,coy:0,ap:0,jb:0,jp:false});st='play';
+ toast=['💊 La Cura Milagrosa funcionó… ¿o era agua?',180];
+}
+function collect(p){
+ const it=p.item;
+ if(it.k){drunk=0;P.vy=-13;P.g=false;P.ap=0;SFX.fresh();unlock('kebab');toast=['🥙 ¡Kebab de la Sabiduría! Impulso total',180]}
+ else if(it.h){SFX.fresh();P.ch=Math.min(2,P.ch+1);if(P.ch>=2)unlock('doble');drunk=Math.max(0,drunk-35);toast=[it.e+' ¡Energía recuperada! Salto doble ⚡',200];
+  for(let i=0;i<8;i++)bubs.push({x:P.x+rnd(-12,12),y:P.y-14,t:40,r:rnd(2,5),dx:rnd(-.5,.5)})}
+ else{SFX.drink();drunk=Math.min(100,drunk+it.v);if(it.lg)P.lgT=240;run.d++;unlock('trago');if(Math.random()<.35)say();toast=[it.e+' '+it.n,210,it.d];
+  for(let i=0;i<8;i++)bubs.push({x:P.x+rnd(-12,12),y:P.y-14,t:40,r:rnd(2,5),dx:rnd(-.5,.5)})}
+ p.item=null;
+ if(drunk>=100&&bo==0)bp=1;
+}
+
+function step(){
+ music();hazards();if(bo>0){bo--;if(bo==0){drunk=50;wakeFx()}}
+ const target=(bo>0||vm>0)?0:dir*MAXV*(iv>0?-1:1),k=.24*(1-.82*drunk/100);
+ P.vx+=(target-P.vx)*k;P.x+=P.vx;
+ if(P.x<12){P.x=12;P.vx=0}if(P.x>W-12){P.x=W-12;P.vx=0}
+ if(Math.abs(P.vx)>.3)P.face=Math.sign(P.vx);
+ if(jFlash>0)jFlash--;if(bo>0){P.jp=false;P.jb=0}
+ if(P.jb>0)P.jb--;
+ const can=P.g||P.coy>0,doJ=()=>{P.vy=-JV;P.g=false;P.coy=0;P.jb=0;P.ap=0;SFX.jump()};
+ if(P.jp){P.jp=false;
+  if(can)doJ();
+  else if(P.ch>0&&P.ap>8){P.ch--;P.vy=-JV*1.3;P.ap=0;SFX.air();floats.push({x:P.x,y:P.y+14,t:30,s:'⚡'})}
+  else P.jb=9}
+ else if(P.jb>0&&can)doJ();
+ if(P.g){const q=P.gp;if(q.m)P.x+=q.dx||0;if(q.fall||P.x<q.x-8||P.x>q.x+q.w+8){P.g=false;P.coy=6}else{P.y=q.y-18;P.vy=0}}
+ if(!P.g){P.vy+=G*(P.lgT>0?.45:1);if(P.lgT>0)P.lgT--;P.y+=P.vy;P.ap++;if(P.coy>0)P.coy--;
+  if(P.vy>0)for(const p of plats){
+   if(p.fall)continue;
+   const b=P.y+18;
+   if(P.x>p.x-8&&P.x<p.x+p.w+8&&b>=p.y&&b-P.vy<=p.y+2){
+    P.y=p.y-18;P.vy=0;P.g=true;P.gp=p;P.ap=0;SFX.land();if(p.fake&&!p.cr){p.cr=30;SFX.crumble()}if(p.b){P.vy=-JV*1.6;P.g=false;SFX.air()}
+    break;
+   }
+  }
+ }
+ if(P.y<240){const d=240-P.y;P.y=240;climb+=d;topY+=d;
+  plats.forEach(p=>p.y+=d);floats.forEach(f=>f.y+=d);bubs.forEach(b=>b.y+=d)}
+ while(topY>-40){topY-=rnd(58,Math.min(98,74+climb/150));addPlat(topY)}
+ plats.forEach(p=>{if(p.cr>0&&bo==0&&--p.cr==0)p.fall=1;if(p.fall)p.y+=4});
+ plats=plats.filter(p=>p.y<H+70);
+ for(const p of plats){
+  if(!p.item||p.fall)continue;
+  if(Math.hypot(P.x-(p.x+p.w/2),P.y-(p.y-24))<26)collect(p);
+ }
+ if(bo==0)drunk=Math.max(0,drunk-.018);
+ if(hic>0)hic--;
+ if(drunk>70&&bo==0){hicT--;if(hicT<=0){hic=24;SFX.hic();run.h++;if(run.h>=5)unlock('hipo');P.vx+=rnd(-3,3);floats.push({x:P.x,y:P.y-30,t:50,s:pk(['¡HIC!','¡HIC!','hic-pótesis','¡HIC! (cita necesaria)'])});hicT=rnd(150,300)-(drunk-70)*3}}
+ const ei=eraIdx();
+ if(ei!=lastEra){lastEra=ei;banner={t:240,s:ERAS[ei].n,g:ERAS[ei].g,i:ERAS[ei].e};SFX.era();eraAch(ei);eraFx(ei)}
+ if(!run.end&&ERAS.length<ERAS_ALL.length&&climb>=ERAS[ERAS.length-1].from+ERA_LEN){run.end=1;banner={t:300,s:'¡Continuará!',g:'Más épocas en la próxima actualización',i:'🚧'};SFX.era();eraFx(ERAS.length-1)}
+ floats.forEach(f=>{f.t--;f.y-=.6});floats=floats.filter(f=>f.t>0);
+ bubs.forEach(b=>{b.t--;b.y-=1;b.x+=b.dx});bubs=bubs.filter(b=>b.t>0);
+ if(toast&&--toast[1]<=0)toast=null;
+ if(banner&&--banner.t<=0)banner=null;
+ if(P.y>H+30)over();
+}
+
+// ---- Dibujo ----
+const circ=(x,y,r,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()};
+const ell=(x,y,rx,ry,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);ctx.fill()};
+const rr=(x,y,w,h,r,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()};
+function tx(s,x,y,size,col,al,bold){ctx.font=(bold?'bold ':'')+size+'px system-ui,sans-serif';ctx.fillStyle=col;ctx.textAlign=al||'center';ctx.textBaseline='middle';ctx.fillText(s,x,y)}
+
+const DRESS=[
+ ()=>{ell(0,14,10,6,'#a0702f');circ(-4,9,1.4,'#f3e9d2');circ(0,10,1.4,'#f3e9d2');circ(4,9,1.4,'#f3e9d2');ctx.strokeStyle='#f3e9d2';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(5,-23);ctx.lineTo(13,-28);ctx.stroke();circ(4,-23,2,'#f3e9d2');circ(14,-28,2,'#f3e9d2')},
+ ()=>{ell(0,-21,19,4,'#e3c26a');ctx.fillStyle='#efd37f';ctx.beginPath();ctx.arc(0,-22,10,Math.PI,0);ctx.fill();rr(-10,13,20,3,1,'#7a5230')},
+ ()=>{ell(0,14,10,6,'#4d7ea8');ctx.strokeStyle='#c0392b';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-8,14,Math.PI*1.12,Math.PI*1.88);ctx.stroke()},
+ ()=>{ctx.strokeStyle='#e8c14a';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,3,10,.15*Math.PI,.85*Math.PI);ctx.stroke();ctx.fillStyle='#e8c14a';ctx.beginPath();ctx.moveTo(-11,-21);ctx.lineTo(11,-21);ctx.lineTo(8,-31);ctx.lineTo(-8,-31);ctx.fill();rr(-9,-26,18,3,1,'#2f6bd0')},
+ ()=>{for(let k=-3;k<=3;k++)circ(k*4.5,-21+Math.abs(k)*.9,2.4,'#4f9a3c');ell(0,14,10,6,'#f5f5f0')},
+ ()=>{ctx.fillStyle='#c9a227';ctx.beginPath();ctx.ellipse(0,-15,15.5,9,0,Math.PI,0);ctx.fill();rr(-15.5,-17,31,3,1,'#a8841c');rr(-3,-34,6,12,2,'#c0392b');ell(0,14,10,6,'#b03a2e')},
+ ()=>{ctx.fillStyle='#9aa3ad';ctx.beginPath();ctx.ellipse(0,-15,15.5,9,0,Math.PI,0);ctx.fill();rr(-15.5,-17,31,3,1,'#6d757e');ctx.strokeStyle='#f2d33c';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(22,6);ctx.quadraticCurveTo(30,-4,27,-14);ctx.stroke()},
+ ()=>{ell(0,-21,18,3.5,'#222');rr(-9,-31,18,11,3,'#333');rr(-9,-24,18,3,1,'#c0392b');ctx.fillStyle='#c0392b';ctx.beginPath();ctx.moveTo(0,3);ctx.lineTo(-6,0);ctx.lineTo(-6,6);ctx.fill();ctx.beginPath();ctx.moveTo(0,3);ctx.lineTo(6,0);ctx.lineTo(6,6);ctx.fill()},
+ ()=>{ell(0,14,10,6,'#ff4fa3');rr(-11,-13,22,6,2,'rgba(17,17,17,.6)');ctx.strokeStyle='#2ee6d6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-8,14,Math.PI*1.1,Math.PI*1.9);ctx.stroke()},
+ ()=>{ell(0,14,10,6,'#e8ecff');rr(-12,-14,24,8,4,'rgba(80,255,255,.45)');ctx.strokeStyle='#7df9ff';ctx.lineWidth=1.5;ctx.strokeRect(-12,-14,24,8)}
+];
+const OLDN=['Caos Prehistórico','Los Agricultores','Mesopotamia','Antiguo Egipto','Antigua Grecia','Imperio Romano','Edad Media','Años 20','Años 80','Futuro'];
+ERAS_ALL.forEach(e=>{const i=OLDN.indexOf(e.n);if(i>=0&&!e.dr){e.dr=DRESS[i];e.hz=HZ[i];e.rt=ROOT[i];e.wv=WAVE[i]}});
+function ape(x,y,vy,t){
+ const L=lbl(),f=P.face,ex=[-5,5],up=vy<0,w=Math.sin(t*.25)*3;
+ ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(t*.07)*(drunk/100)*.3+P.vx*.03+(bo>0?clamp(Math.min((BO_T-bo)/25,bo/25),0,1)*1.45:0));
+ ctx.lineCap='round';ctx.strokeStyle='#6b4423';ctx.lineWidth=6;
+ ctx.beginPath();ctx.moveTo(-9,6);ctx.lineTo(-21,up?-6:11+w);ctx.moveTo(9,6);ctx.lineTo(21,up?-6:11-w);
+ ctx.moveTo(-6,15);ctx.lineTo(-9,up?25:21);ctx.moveTo(6,15);ctx.lineTo(9,up?25:21);ctx.stroke();
+ ell(0,8,12,13,'#7a4e2a');ell(0,10,7,8,'#dcb787');
+ circ(-16,-8,6,'#7a4e2a');circ(16,-8,6,'#7a4e2a');circ(-16,-8,3,'#e8c3a0');circ(16,-8,3,'#e8c3a0');
+ circ(0,-8,15,'#8a5a30');ell(0,-6,11,9.5,'#e8c3a0');
+ ctx.strokeStyle='#2a1608';ctx.lineWidth=2;
+ if(hic>0||vm>0){ex.forEach(e=>{circ(e,-10,4.8,'#fff');circ(e,-10,1.4,'#222')});circ(0,-2,3.6,'#5a1a1a')}
+ else if(L=='Sobrio'){ex.forEach(e=>{circ(e,-10,3.6,'#fff');circ(e+f,-10,1.7,'#222')});ctx.beginPath();ctx.arc(0,-4,4,.15*Math.PI,.85*Math.PI);ctx.stroke()}
+ else if(L=='Alegre'){ex.forEach(e=>{ctx.beginPath();ctx.arc(e,-9,3.3,Math.PI,0);ctx.stroke()});
+  circ(-8,-4,2.8,'rgba(255,90,110,.55)');circ(8,-4,2.8,'rgba(255,90,110,.55)');
+  ctx.beginPath();ctx.arc(0,-5,6,.1*Math.PI,.9*Math.PI);ctx.stroke()}
+ else if(L=='Mareado'){const o=Math.sin(t*.1)*1.5;
+   ex.forEach(e=>{circ(e,-10,4.4,'#fff');circ(e+o,-9.5,1.8,'#222');ctx.fillStyle='#e8c3a0';ctx.beginPath();ctx.arc(e,-10,4.6,Math.PI,0);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(e-4.6,-10);ctx.lineTo(e+4.6,-10);ctx.stroke()});
+   ctx.beginPath();ctx.moveTo(-5,-3);ctx.quadraticCurveTo(-1,-1,2,-3.5);ctx.quadraticCurveTo(4,-4.5,5,-3);ctx.stroke()}
+  else if(L=='Borracho'){const o=Math.sin(t*.12)*1.2;
+   ex.forEach(e=>{circ(e,-10,4.7,'#fff');circ(e-Math.sign(e)*1.9+o,-10,1.7,'#222');ctx.strokeStyle='rgba(90,50,30,.65)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(e,-6.8,3.8,.15*Math.PI,.85*Math.PI);ctx.stroke();ctx.strokeStyle='#2a1608';ctx.lineWidth=2});
+   ctx.beginPath();ctx.moveTo(-5,-3);ctx.quadraticCurveTo(-2,-1,0,-3);ctx.quadraticCurveTo(2,-5,5,-3);ctx.stroke();
+   ell(2,1+Math.sin(t*.2),2.6,3.8+Math.sin(t*.2),'#ff6f91');
+   ctx.strokeStyle='#8fd3ff';ctx.beginPath();ctx.moveTo(-3,-2);ctx.lineTo(-3,2+Math.sin(t*.15)*1.5);ctx.stroke()}
+ else if(L=='Blackout'){ex.forEach(e=>{ctx.beginPath();ctx.moveTo(e-3,-9);ctx.lineTo(e+3,-9);ctx.stroke()});ell(0,-2,3,2,'#5a1a1a')}
+ else{ex.forEach(e=>{circ(e,-10,5,'#fff');ctx.lineWidth=1.2;ctx.beginPath();for(let k=0;k<=30;k++){const a=k*.55+t*.3,r=k*.16;ctx.lineTo(e+Math.cos(a)*r,-10+Math.sin(a)*r)}ctx.stroke();ctx.lineWidth=2});
+  ell(0,-2,3.2,2.8,'#5a1a1a');ctx.strokeStyle='#8fd3ff';ctx.beginPath();ctx.moveTo(3,0);ctx.lineTo(3,7+Math.sin(t*.2)*2);ctx.stroke();circ(3,8+Math.sin(t*.2)*2,1.4,'#8fd3ff')}
+ circ(-1.6,-6.5,.9,'#2a1608');circ(1.6,-6.5,.9,'#2a1608');
+  if(drunk>25){const q=clamp((drunk-25)/60,0,1);circ(0,-6.4,2+q*1.2,'rgba(230,50,60,'+(.35+q*.55)+')');circ(-8.5,-4,3,'rgba(255,90,110,'+(.15+q*.4)+')');circ(8.5,-4,3,'rgba(255,90,110,'+(.15+q*.4)+')')}
+  if(gen=='f'){ctx.strokeStyle='#2a1608';ctx.lineWidth=1.3;ex.forEach(e=>{const s=Math.sign(e);ctx.beginPath();ctx.moveTo(e+s*3.6,-11);ctx.lineTo(e+s*6.2,-13);ctx.moveTo(e+s*3.8,-9.4);ctx.lineTo(e+s*6.4,-10);ctx.stroke()});circ(-9,-21,3.4,'#ff5fa2');circ(-14,-23.5,3.4,'#ff5fa2');circ(-14,-18.5,3.4,'#ff5fa2');circ(-12,-21,1.6,'#ffd1e6')}
+  else{ctx.strokeStyle='#4a2c12';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(-8,-15.2);ctx.lineTo(-2,-14.2);ctx.moveTo(8,-15.2);ctx.lineTo(2,-14.2);ctx.stroke();for(let k=0;k<5;k++)circ(-5+k*2.5,2.2+(k%2)*.8,.55,'rgba(60,35,15,.6)')}
+ ERAS[eraIdx()].dr();
+ ctx.restore();
+}
+
+function drawPlat(p,e){
+ ctx.save();ctx.translate(p.x+(p.cr>0?rnd(-1.5,1.5):0),p.y);
+ if(p.m){rr(6,6,p.w-12,6,3,'rgba(0,0,0,.25)');tx(p.k,p.w/2,-10,44,'#000')}
+ else if(p.b){rr(0,6,p.w,7,3,'#e84a9a');tx('🍄',p.w/2,-6,34,'#000')}
+ else if(p.fake){ctx.globalAlpha=p.fall?.6:1;rr(0,0,p.w,11,5,'#c9a36b');
+  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=1.6;ctx.beginPath();
+  ctx.moveTo(p.w*.3,0);ctx.lineTo(p.w*.4,6);ctx.lineTo(p.w*.33,11);ctx.moveTo(p.w*.65,0);ctx.lineTo(p.w*.58,5);ctx.lineTo(p.w*.7,11);ctx.stroke()}
+ else if(e==0){rr(0,2,p.w,9,4,'#7b5230');rr(-5,-2,24,8,4,'#3f9a3f');rr(p.w-20,-2,24,8,4,'#4fb04c')}
+ else{const c=ERAS[e];rr(0,0,p.w,11,4,c.pc);rr(0,7,p.w,4,2,c.pc2);rr(6,2,p.w-12,2,1,'rgba(255,255,255,.45)')}
+ ctx.restore();
+}
+function drawItem(p,e){
+ const it=p.item,x=p.x+p.w/2,y=p.y-24+Math.sin(tick*.08+p.x)*2;
+ circ(x,y,18+Math.sin(tick*.1)*2,it.k?'rgba(255,230,120,.4)':it.h?'rgba(140,225,255,.5)':e==0?'rgba(190,255,110,.4)':'rgba(255,210,120,.35)');
+ ctx.font='24px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#000';ctx.fillText(it.e,x,y);
+ if(it.h){for(let j=0;j<3;j++){const a=tick*.1+j*2.1;circ(x+Math.cos(a)*17,y+Math.sin(a)*17,1.8,'#fff')}}
+ if(e==0&&!it.k&&!it.h){
+  for(let j=0;j<3;j++)circ(x+(j-1)*8+Math.sin(tick*.1+j)*2,y+8-((tick*.5+j*9)%22),1.8,'rgba(255,255,255,.75)');
+  for(let j=0;j<2;j++){const a=tick*.15+j*3.1;circ(x+Math.cos(a)*16,y-4+Math.sin(a*1.3)*8,1.3,'#2a1608')}
+ }
+}
+
+function draw(){
+ const i=eraIdx(),LI=ERAS.length-1,n=ERAS[Math.min(i+1,LI)],c=ERAS[i];
+ let bt=0;if(i<LI)bt=clamp((climb-(n.from-250))/250,0,1);
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,mix(c.top,n.top,bt));g.addColorStop(1,mix(c.bot,n.bot,bt));
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.save();
+ const w=drunk/100*(lowfx?.4:1);
+ ctx.translate(W/2,H/2);ctx.rotate(Math.sin(tick*.025)*.035*w);ctx.translate(-W/2+Math.sin(tick*.04)*5*w+(shk>0?rnd(-1,1)*shk*.25:0),-H/2+(shk>0?rnd(-1,1)*shk*.25:0));
+ ctx.globalAlpha=.35;
+ for(let k=0;k<7;k++){
+  const x=(k*97+30)%W,sp=.25+.05*k,y=(((k*131-climb*sp)%(H+60))+H+60)%(H+60)-30;
+  ctx.font=(22+(k%3)*8)+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#000';ctx.fillText(c.deco,x,y);
+ }
+ ctx.globalAlpha=1;
+ plats.forEach(p=>{drawPlat(p,i);if(p.item)drawItem(p,i)});
+ bubs.forEach(b=>{ctx.strokeStyle='rgba(255,255,255,'+(b.t/40)+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.stroke()});
+ if(P.ch>0&&st=='play')circ(P.x,P.y,27+Math.sin(tick*.2)*2,'rgba(255,230,120,.32)');
+ drawHz();
+ if(P.inv>0&&bo==0&&tick%6<3)ctx.globalAlpha=.4;
+ ape(P.x,P.y,P.vy,tick);ctx.globalAlpha=1;bubbleDraw();
+ 
+ 
+ floats.forEach(f=>{ctx.globalAlpha=Math.min(1,f.t/25);tx(f.s,f.x,f.y,20,'#ffe27a',null,1)});
+ ctx.globalAlpha=1;ctx.restore();
+ blurFx();blackoutDraw();
+ conf.forEach(c=>{ctx.globalAlpha=Math.min(1,c.t/30);tx(c.e,c.x,c.y,24,'#000')});ctx.globalAlpha=1;
+ if(flash>0){ctx.fillStyle='rgba(255,255,255,'+(flash/45*.85)+')';ctx.fillRect(0,0,W,H)}
+ if(st=='play')hud();
+ if(st=='menu')menu();
+ if(st=='pick')pick();
+ if(st=='intro')intro();
+ if(st=='over')gameOver();
+}
+function hud(){
+ rr(8,8,W-16,52,12,'rgba(20,10,0,.45)');
+ tx(Math.floor(climb/10)+' m',18,26,20,'#fff3d6','left',1);
+ tx(ERAS[eraIdx()].e+' '+ERAS[eraIdx()].n,W/2,26,15,'#fff3d6',null,1);
+ tx('Récord '+Math.floor(best/10),W-18,26,13,'#ffd36b','right');
+ tx(lbl(),18,48,12,'#fff3d6','left');
+ rr(132,43,W-150,10,5,'rgba(255,255,255,.2)');
+ const col=drunk<40?'#8fe36b':drunk<75?'#ffc64a':'#ff5a4a';
+ if(drunk>0)rr(132,43,Math.max(10,(W-150)*drunk/100),10,5,col);
+ pad();muteBtn();atoastDraw();if(iv>0&&tick%20<14)tx('🔄 ¡Controles al revés!',W/2,H-182,15,'#ffe27a',null,1);
+ if(P.ch>0)tx('⚡ Doble salto ×'+P.ch,W-18,76,14,'#ffe27a','right',1);
+ if(toast){ctx.globalAlpha=Math.min(1,toast[1]/20);const d=toast[2];rr(20,H-156,W-40,d?46:38,19,'rgba(20,10,0,.7)');tx(toast[0],W/2,d?H-141:H-137,14,'#fff3d6',null,1);if(d)tx(d,W/2,H-122,11,'#ffd9a3');ctx.globalAlpha=1}
+ if(banner){const a=Math.min(1,banner.t/40),b=banner.i;ctx.globalAlpha=a;ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=6;
+ if(b){rr(0,92,W,112,0,'rgba(0,0,0,.5)');tx(b,W/2,124,54*(1+Math.max(0,banner.t-215)*.04));tx(banner.s,W/2,166,28,'#fff',null,1);tx(banner.g,W/2,190,13,'#fff')}
+ else{tx(banner.s,W/2,130,28,'#fff',null,1);if(banner.g)tx(banner.g,W/2,160,13,'#fff')}
+ ctx.shadowBlur=0;ctx.globalAlpha=1}
+}
+const BL={x:12,y:H-96,w:78,h:78},BR={x:98,y:H-96,w:78,h:78};
+function pad(){
+ [[BL,-1,heldL],[BR,1,heldR]].forEach(([b,d,h])=>{
+  rr(b.x,b.y,b.w,b.h,39,'rgba(255,243,214,'+(h?.5:.24)+')');
+  const cx=b.x+b.w/2,cy=b.y+b.h/2;
+  ctx.fillStyle='rgba(255,255,255,.88)';ctx.beginPath();ctx.moveTo(cx+d*13,cy);ctx.lineTo(cx-d*10,cy-15);ctx.lineTo(cx-d*10,cy+15);ctx.closePath();ctx.fill();
+ });
+ rr(W-114,H-100,102,84,42,'rgba(255,200,80,'+(jFlash>0?.55:.28)+')');
+ ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.moveTo(W-63,H-90);ctx.lineTo(W-77,H-70);ctx.lineTo(W-49,H-70);ctx.closePath();ctx.fill();
+ tx('SALTAR',W-63,H-50,15,'rgba(255,255,255,.92)',null,1);
+}
+function menu(){
+ ctx.fillStyle='rgba(20,10,0,.55)';ctx.fillRect(0,0,W,H);
+ drunk=(tick*.3)%100;P.x=W/2;P.y=300+Math.sin(tick*.06)*8;P.vy=-1;P.vx=0;
+ tx('DRUNKOLUTION',W/2,110,36,'#ffd36b',null,1);
+ tx('The Drunken Ape Theory',W/2,148,16,'#fff3d6');
+ ctx.save();ctx.translate(W/2,300);ctx.scale(2.6,2.6);ctx.translate(-W/2,-300);ape(P.x,P.y,P.vy,tick);ctx.restore();
+ tx('Flechas para moverte · toca para saltar',W/2,412,14,'#fff3d6');
+ tx('Fruta fresca = energía y salto doble ⚡',W/2,436,14,'#fff3d6');
+ tx('Fruta fermentada = ebriedad… no te pases',W/2,460,14,'#fff3d6');
+ ctx.globalAlpha=.6+.4*Math.sin(tick*.08);tx(cp>0?'Toca para seguir':'Toca para empezar',W/2,520,22,'#fff',null,1);ctx.globalAlpha=1;
+ if(cp>0){tx('Desde '+ERAS[cp].e+' '+ERAS[cp].n,W/2,490,15,'#ffd9a3');tx('↺ Desde cero',W/2,542,13,'#fff3d6')}
+ if(best)tx('Récord: '+Math.floor(best/10)+' m',W/2,560,14,'#ffd36b');muteBtn();infoBtn();tx('🏆 Logros secretos: '+achCount()+'/'+Object.keys(ACHD).length,W/2,584,13,'#fff3d6');
+}
+const B1={x:40,y:330,w:280,h:62},B2={x:40,y:408,w:280,h:50},B3={x:40,y:470,w:280,h:44};
+function gameOver(){
+ ctx.fillStyle='rgba(0,0,0,.68)';ctx.fillRect(0,0,W,H);
+ tx('¡Evolución interrumpida!',W/2,110,26,'#ffd36b',null,1);
+ tx(Math.floor(climb/10)+' m',W/2,190,60,'#fff',null,1);
+ tx(newRec?'¡Nuevo récord!':'Récord '+Math.floor(best/10)+' m',W/2,245,16,'#ffd36b');
+ tx(ERAS[eraIdx()].e+' Época alcanzada: '+ERAS[eraIdx()].n,W/2,275,15,'#fff3d6');
+ tx(msg,W/2,307,13,'#ffd36b');
+ if(!curaUsed){rr(B1.x,B1.y,B1.w,B1.h,14,'#2f9e57');tx('💊 La Cura Milagrosa',W/2,B1.y+22,19,'#fff',null,1);tx('Anuncio de mentira: revive una vez, sobrio',W/2,B1.y+46,12,'#d8ffe6')}
+ rr(B2.x,B2.y,B2.w,B2.h,14,'#c9761c');tx(cp>0?'▶ Seguir desde '+ERAS[cp].e+' '+ERAS[cp].n:'🍌 Jugar otra vez',W/2,B2.y+25,cp>0?16:19,'#fff',null,1);
+ if(cp>0){rr(B3.x,B3.y,B3.w,B3.h,14,'#5a4a3a');tx('↺ Empezar de cero',W/2,B3.y+22,15,'#fff',null,1)}
+}
+
+// ---- Entrada ----
+const pos=ev=>{const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)/r.width*W,(ev.clientY-r.top)/r.height*H]};
+const hit=(x,y,b)=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h;
+cv.addEventListener('pointerdown',ev=>{
+ ev.preventDefault();const[x,y]=pos(ev);
+ au();
+ if(st!='over'&&hit(x,y,BE)){lowfx=!lowfx;try{localStorage.setItem('drunko_lowfx',lowfx?'1':'0')}catch(e){}return}
+ if(st!='over'&&hit(x,y,BM)){muted=!muted;try{localStorage.setItem('drunko_mute',muted?'1':'0')}catch(e){}if(!muted)SFX.fresh();return}
+ if(st=='pick'){const g=hit(x,y,BL1)?'m':hit(x,y,BL2)?'f':'';if(g){gen=g;try{localStorage.setItem('drunko_gen',g)}catch(e){}st='menu';SFX.fresh()}return}
+ if(st=='intro'){introNext(x,y);return}
+ if(st=='menu'&&hit(x,y,BG)){st='pick';return}
+ if(st=='menu'&&hit(x,y,BI)){pickIntro();ii=0;iT=tick;st='intro';return}
+ if(st=='menu'&&cp>0&&hit(x,y,BZ)){reset(0);st='play';return}
+ if(st=='menu'){reset(cp);st='play';return}
+ if(st=='over'){
+  if(performance.now()-overAt<500)return;
+  if(!curaUsed&&hit(x,y,B1))revive();
+  else if(hit(x,y,B2)){reset(cp);st='play'}
+  else if(cp>0&&hit(x,y,B3)){reset(0);st='play'}
+  return;
+ }
+ try{cv.setPointerCapture(ev.pointerId)}catch(e){}
+ const z=zone(x,y);ptrs.set(ev.pointerId,z);if(z=='J'){P.jp=true;jFlash=8}setDir();
+});
+const ptrs=new Map();
+const zone=(x,y)=>hit(x,y,BL)?'L':hit(x,y,BR)?'R':'J';
+function setDir(){let l=0,r=0;ptrs.forEach(z=>{if(z=='L')l=1;if(z=='R')r=1});dir=r-l;heldL=l;heldR=r}
+cv.addEventListener('pointermove',ev=>{
+ if(!ptrs.has(ev.pointerId)||st!='play')return;
+ const[x,y]=pos(ev),z=zone(x,y),o=ptrs.get(ev.pointerId);
+ if(z!=o&&z!='J'&&o!='J'){ptrs.set(ev.pointerId,z);setDir()}
+});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,ev=>{ptrs.delete(ev.pointerId);setDir()}));
+addEventListener('keydown',e=>{
+ if(e.key=='ArrowLeft'||e.key=='a')dir=-1;
+ else if(e.key=='ArrowRight'||e.key=='d')dir=1;
+ else if(e.key==' '||e.key=='Enter'||e.key=='ArrowUp'||e.key=='w'){
+  if(e.repeat)return;
+  if(st=='intro'){introNext();return}
+  if(st=='play'){P.jp=true;jFlash=8}
+  else if(st=='menu'||performance.now()-overAt>500){reset(cp);st='play'}
+ }
+});
+addEventListener('keyup',e=>{
+ if((e.key=='ArrowLeft'||e.key=='a')&&dir<0)dir=0;
+ if((e.key=='ArrowRight'||e.key=='d')&&dir>0)dir=0;
+});
+
+// ---- Bucle ----
+reset();pickIntro();
+let last=0,acc=0;
+function loop(ts){
+ requestAnimationFrame(loop);
+ acc+=Math.min(ts-last,100);last=ts;
+ while(acc>=16.67){acc-=16.67;tick++;if(st=='play')step()}
+ draw();
+}
+requestAnimationFrame(loop);
+setTimeout(()=>{const b=document.getElementById('boot');if(b)b.remove()},700);
+</script>
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
+addEventListener('contextmenu',e=>e.preventDefault());
+</script>
+</body>
+</html>
